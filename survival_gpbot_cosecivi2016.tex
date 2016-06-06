@@ -405,7 +405,7 @@ Considerando el número de combates realizados ($N$), el número de victorias cont
 Esta función tiende a favorecer las victorias frente a los turnos.
 Cada individuo se ha enfrentado 3 veces en 10 mapas diferentes: los 5 usados durante la evolución, llamados \textit{training maps} y otros 5 nuevos (\textit{unknown maps}), por tanto $N=30$. 
 
-La Figura \ref{figura:Score_VS_GPBot} muestra los boxplots del Score obtenido por toda la población de las 30 ejecuciones en cada iteración.
+La Figura \ref{figura:Score_VS_GPBot} muestra los \textit{boxplots} del \textit{Score} obtenido por toda la población de las 30 ejecuciones en cada iteración.
 Agrupados según los mapas conocidos (con los que se ha evolucionado) a la izquierda, o los mapas nuevos a la derecha.
 Como se puede ver la tendencia es creciente, como era deseable, además los resultados son ligeramente mejores en los mapas previamente conocidos, como es lógico.
 
@@ -439,7 +439,7 @@ Por último, si estudiamos la {\em edad} (número de generaciones que sobreviven) 
 \begin{center}
   \epsfig{file=./imags/ageall,width=5cm}
 \end{center}
-\caption{Boxplots de la edad (número de generaciones/iteraciones que sobrevive un bot) de la población en una ejecución.}
+\caption{\textit{Boxplots} de la edad (número de generaciones/iteraciones que sobrevive un bot) de la población en una ejecución.}
 
 \label{figura:age}
 \end{figure}
@@ -449,76 +449,65 @@ A tenor de lo visto en estos experimentos, consideramos que la evolución del alg
 
 % ---------------------------------------------------------------------------
 
-\subsection{Analysis of the score uncertainty}
+\subsection{Análisis de ruido}
 \label{subsec:analysisnoise}
 
-To conduct this study we will compare the 30 best bots obtained by
-GPBot and SurvivalBot across 30 runs; these bots have been
-fixed with a hard to defeat rival, such as the expert/specialized bot
-named ExpGeneBot \cite{Genebot_CIG2012}. 
-% remember: double blind - JJ
-% Antonio - es cierto. Reviso el resto
-The same 10 maps as in previous experiments have been considered, and 30 battles in each one have been done, computing the score in Equation \ref{eq:score}.
-Then a \textit{noise factor} has been calculated for every bot, as the
-% it would be better uncertainty factor - JJ
-% Antonio - vamos a pensarlo para la versión final, porque habría que cambiar las figuras también y Antares está 'de baja'
-% Deberíamos usar Knitr para tener las órdenes que generan las gráficas en el propio paper - JJ
-difference between the maximum and the minimum obtained scores in the
-30 matches. This is because the noise in the scope of optimization in
-videogames is defined as the differences in performance that the same
-individual/bot could show in the same conditions (map and rival), due
-to the pseudo-stochasticity (there are some random events/actions)
-present in the opponent's behaviour and sometimes in the game itself. 
+En este estudio se compararán los mejores 30 bots obtenidos por GPBot con los mejores 30 SurvivalBots (de las 30 ejecuciones). 
+Para elegir el mejor SurvivalBot de cada ejecución, se ha realizado un torneo \textit{todos contra todos} entre los bots de la última generación. El bot que ha ganado más combates ha sido considerado como el mejor. Hemos aplicado este método para evitar el uso de una función Score sobre bots evolucionados sin fitness, a fin de evitar las desventajas que esta función conlleva, como hemos explicado a lo largo del artículo.
 
-Figure \ref{figura:noise} shows the boxplots of the 30 bots of GPBot
-and SurvivalBot. According to the definition of our noise factor, a
-big distance between values means a higher uncertainty in the
-results; this figure shows that the results for
-SurvivalBot are better than those for GPBot, having a lower
-variance. Thus, we can conclude that the resulting bots for our method
-are more reliable in terms of behaviour and thus, show a more robust
-and predictable behavior. 
+Éstos se han enfrentado contra el mejor rival de nuestros trabajos, el bot experto o especializado ExpGeneBot \cite{Genebot_CIG2012}, capaz de adaptar sus estrategias a las características del mapa en el que se desarrolla el combate. 
+Dichos enfrentamientos se han realizado en los mismos 10 mapas considerados en el experimento anterior, en cada uno de los cuales se han realizado 30 combates y calculado el Score de los bots implicados, siguiendo la Ecuación \ref{eq:score}.
+
+A fin de comprobar la influencia que ha tenido el ruido en la generación de los SurvivalBots, hemos calculado un factor de ruido (\textit{noise measure}) para cada bot, el cual se ha obtenido como la diferencia entre el máximo y el mínimo de los Scores obtenidos en los 30 combates que ha llevado a cabo cada bot en cada mapa. 
+
+La Figura \ref{figura:noise} muestra los \textit{boxplots} de los 30 GPBots y SurvivalBots. Según la definición del factor de ruido que hemos definido, una distancia grande entre valores significará una mayor incertidumbre en los resultados.
+Las gráficas muestran que los SurvivalBots se comportan mejor en este sentido, presentando una varianza menor. De modo que se puede concluir que los bots obtenidos mediante el método descrito en este artículo son más fiables o robustos en términos de comportamiento y rendimiento.
 %
 \begin{figure}[htb]
 \tiny
 \begin{center}
   \epsfig{file=./imags/noise_study,width=4.5cm}
 \end{center}
-\caption{{\em Noise factor}, that is, maximum - minimun scores for every map, of the best 30 bots obtained using GPBot and SurvivalBot approaches, evaluated in 10 different maps (5 previously trained and 5 not previously trained), 30 times/battles per map.}
+\caption{{\em Noise measure} o factor de ruido, calculado como el máximo score obtenido - el mínimo en cada mapa, para cada uno de los 30 GPBots y SurvivalBots. 30 combates por mapa y 10 mapas diferentes.}
 \label{figura:noise}
 \end{figure}
 %
-But of course the bots are designed to win battles. We will examine
-their performance in this area next.
 
+Finalmente, en la siguiente sección analizaremos la calidad o competitividad de los bots obtenidos con el método propuesto, ya que ese es el objetivo final de esta evolución.
 
 % --------------------------------------------------------------
 
-\subsection{Analysis of the generated bots}
+\subsection{Análisis de los bots generados}
 \label{subsec:analysisbots}
 
-Firstly, all the SurvivalBots obtained at the end of the runs have been tested against other bots available in the literature. To this end, jut one SurvivalBot per run must be chosen, so first the {\em best} individual of every run has been selected by confronting all the individuals of the last generation in an \textit{all vs. all tournament}. The bot who has won more times is considered as the best. This method has been applied in order to avoid the usage of the score function (and therefore, the shortcomings we are trying to avoid). 
+En este experimento todos los SurvivalBots obtenidos al final de las ejecuciones se han enfrentado a otros bots del estado del arte. Para ello, en primer lugar se han seleccionado los 30 mejores, como se hizo en el experimento anterior.
+Dichos bots han sido enfrentados contra un bot básico (GoogleBot) y 4 del estado del arte. Los bots y sus configuraciones se pueden ver en la Tabla \ref{tab:literaturebots}.
 
-Then, we have confronted the 30 best bots obtained in each configuration again with several bots available in the literature, in the 100 example maps provided by Google with the competition framework. These have been used to validate if the obtained SurvivalBots can be competitive in terms of quality in maps not used during evolution, and against unknown bots (as a difference to the other approaches). Table \ref{tab:literaturebots} presents the bots used as opponents. 
+Los enfrentamientos se han realizado en los 100 mapas de ejemplo que proporcionó Google en el campeonato, los cuales no han sido usados durante la evolución. 
 
 \begin{table}
 \begin{center}
 \begin{tabular}{|c|c|c|c|}
 \hline
-{\em Bot Name} & {\& Reference} & {\em Simulations in training} & {\em Max. Turns} \\\hline \hline
-BullyBot & Google AI Web & None & None \\ \hline
-SurvivalBot & proposed here & 8000 & 1000 \\ \hline
+{\em Bot} & {\& Referencia} & {\em Combates en el entrenamiento} & {\em Max. Turnos} \\\hline \hline
+BullyBot & Web del Google AI Challenge & No & No \\ \hline
+SurvivalBot & propuesto aquí & 8000 & 1000 \\ \hline
 GeneBot & \cite{Genebot_JCST} & 32000 & 1000 \\ \hline
 ExpGeneBot & \cite{Genebot_CIG2012} & 32000 & 1000 \\ \hline
 GPBot & \cite{GarciaGP14} & 8000 & 1000 \\ \hline
 HoFBot & \cite{NogueiraCoevolutionary14} & 180000 & 500 \\ \hline
 \end{tabular}
-\caption{Bots available in the literature used for measuring the quality of the SurvivalBots.}     % [pedro]
+\caption{Bots disponibles en la literatura que hemos usado para medir la calidad de los SurvivalBots}
 \label{tab:literaturebots}
 \end{center}
 \end{table}
 
-Figure \ref{figure:boxplot_mejores_contra_clasicos} shows the boxplots of the percentage of victories of the SurvivalBots against every rival. Note that it only shows the victories, not the draws. The most interesting result is that GPBot is clearly outperformed, even if the number of battles has been the same to train SurvivalBot than for GPBot, as we set. Therefore, our method can generate competitive bots without using existing ones in the training. The HoFBot, which was also obtained using co-evolution, has also been defeated more than 50\% times by most of the best SurvivalBots. However, highly trained bots (GeneBot and ExpGenebot), which applied 4 times more evaluations to be generated have been difficult to beat. It is interesting to mention that in \cite{GarciaGP14} GPBot was able to beat these two bots in a higher value, but this happened because they were used to train GPBot, so it was focused only in beating them.
+\vspace{-1.2cm}
+La Figura \ref{figure:boxplot_mejores_contra_clasicos} muestra los \textit{boxplots} del porcentaje de victorias obtenido por los SurvivalBots contra los demás rivales (no se consideran los empates).
+
+El resultado más interesante es que GPBot es ampliamente superado, dado que el número de combates en la evolución es el mismo y la base de sus motores de IA, basada en PG es similar.
+El HoFBot, que también se obtuvo usando un algoritmo co-evolutivo, ha sido vencido más del 50\% de los combates por la mayoría de los mejores SurvivalBots.
+Sin embargo, bots ampliamente entrenados (4 veces más evaluaciones) y basados en una IA diseñada por un experto, como son GeneBot y ExpGeneBot, han resultado difíciles de vencer, como era de esperar. 
 
 \begin{figure}[htb]
 \tiny
@@ -530,146 +519,38 @@ Figure \ref{figure:boxplot_mejores_contra_clasicos} shows the boxplots of the pe
 \label{figure:boxplot_mejores_contra_clasicos}
 \end{figure}
 
-
-%Although this is not the main contribution of this paper, we also show the resulting behavioural engines of the obtained SurvivalBots, analysing the distribution of actions and decisions at the beginning and at the end of the evolution to understand their behaviour. Figure \ref{figura:tarta_actions} shows the final distribution of the different types of actions ($attack$, $reinforce$ and $do nothing$). This figure shows that the percentage of the $do nothing$ action in the obtained trees has been increased % la acciï¿½n se ha incrementado?
-%                                % Quï¿½ significa eso? Serï¿½ que el
-%                                % nï¿½meor de veces que aparece esa
-%                                % acciï¿½n nosï¿½ dï¿½nde lo ha hecho, ï¿½no?
-%                                % - JJ
-%by the end of the evolution, as it seems logical that not all planets should attack in every turn (they may be waiting to have a large fleet to send). Of course, and because a player wins conquering the enemy planets, it is logical that the $attack$ action is more effective than $reinforce$.
-%
-%\begin{figure}[htb]
-%\tiny
-%\begin{center}
-%
-%
-%    \includegraphics[trim=1cm 7cm 1cm 5.8cm, clip=true,width=4.5cm,angle=-90]{./imags/distribution_initial_action.eps}
-%    \includegraphics[trim=1cm 7cm 1cm 6cm, clip=true,width=4.5cm,angle=-90]{./imags/distribution_final_action.eps}
-%    %\includegraphics{file=./imags/distribution_final_reinforce,width=3cm,angle=-90}
-%
-%
-%\end{center}
-%\caption{Distribution of different types of actions ($attack$, $reinforce$ and $do nothing$) of the generated bots. See section \ref{subsec:generationgp} for more information about actions.}
-%\label{figura:tarta_actions}
-%\end{figure}
-%
-%Figure \ref{figura:tarta_attacking} shows the strategy when a planet is $attacking$ to other. It is clear that the generated bots have a predilection for nearest planets and the ones easiest to be conquered. This make sense because ships flying to long destinations are not being used, so, using a $rush$ strategy makes a good option to conquer and advance.
-%\begin{figure}[htb]
-%\tiny
-%\begin{center}
-%
-%    \includegraphics[trim=1cm 7cm 0cm 7cm, clip=true,width=5cm,angle=-90]{./imags/distribution_initial_attack.eps}
-%    \includegraphics[trim=1cm 7cm 0cm 7cm, clip=true,width=5cm,angle=-90]{./imags/distribution_final_attack.eps}
-%    %\includegraphics{file=./imags/distribution_final_reinforce,width=3cm,angle=-90}
-%
-%\end{center}
-%\caption{Condition of target planet when $attacking$: Nearest, Weakest, Wealthiest, Beneficial, Quickest, Base or Random. See section \ref{subsec:generationgp} for more information about attack actions.}
-%\label{figura:tarta_attacking}
-%\end{figure}
-%
-%Also, the actions are more focused in attacking planets owned by the Enemy (as it can be seen in Figure \ref{figura:tarta_attacking_who}). This can be explained because the bot is not only conquering planets, but also destroying enemy ships that will not be used against it in the future.
-%\begin{figure}[htb]
-%\tiny
-%\begin{center}
-%
-%    \includegraphics[trim=1cm 7cm 1cm 7cm, clip=true,width=5cm,angle=-90]{./imags/distribution_initial_target.eps}
-%    \includegraphics[trim=1cm 7cm 1cm 7cm, clip=true,width=5cm,angle=-90]{./imags/distribution_final_target.eps}
-%    %\includegraphics{file=./imags/distribution_final_reinforce,width=3cm,angle=-90}
-%
-%\end{center}
-%\caption{Owners of target planets when $attacking$: Enemy, Neutral, NotMy. See section \ref{subsec:generationgp} for more information about planet's owner.} % Serï¿½ notmine, ï¿½no? No notmy. FERGU: viene de NotMyPlanet
-%\label{figura:tarta_attacking_who}
-%\end{figure}
-%
-%
-%Figure \ref{figura:tarta_reinforcing} shows the target when a planet is $reinforcing$ the player's planet. As in attack actions, previously explained, it seems to be a good rule focusing in reinforce closer planets, for the same reasons.
-%\begin{figure}[htb]
-%\tiny
-%\begin{center}
-%
-%    \includegraphics[trim=1cm 7cm 1cm 7cm, clip=true,width=5cm,angle=-90]{./imags/distribution_initial_reinforce.eps}
-%    \includegraphics[trim=1cm 7cm 1cm 7cm, clip=true,width=5cm,angle=-90]{./imags/distribution_final_reinforce.eps}
-%    %\includegraphics{file=./imags/distribution_final_reinforce,width=3cm,angle=-90}
-%
-%\end{center}
-%\caption{Destination of planets when $reinforcing$: Near, Base, Wealthiest or Weakest. See section \ref{subsec:generationgp} for more information about reinforcement actions.}
-%\label{figura:tarta_reinforcing}
-%\end{figure}
-%
-%Finally, Figure \ref{figura:tarta_decissions} shows the final proportion of $decisions$. Surprisingly the most important variable to take into account is the ratio between flying and landed ships. This can be explained because it makes sense to find an equilibrium between the two states of ships, as all ships flying or waiting may be counterproductive. The $random$ decision also has importance, as it is the one who gives weights to the branches of the tree.
-%\begin{figure}[htb]
-%\tiny
-%\begin{center}
-%
-%
-%    \includegraphics[trim=1cm 5.5cm 0cm 5.5cm, clip=true,width=4.5cm,angle=-90]{./imags/distribution_initial_condition.eps}
-%    \includegraphics[trim=1cm 5.5cm 0cm 5.5cm, clip=true,width=4.5cm,angle=-90]{./imags/distribution_final_condition.eps}
-%
-%
-%
-%\end{center}
-%\caption{Percentage of $decisions$. See section \ref{subsec:generationgp} for more information about decisions.}
-%\label{figura:tarta_decissions}
-%\end{figure}
-
-
+\vspace{-0.5cm}
+En cualquier caso, este es un punto de partida para SurvivalBot, que tiene mucho margen de mejora, empezando por un mayor número de iteraciones/combates en su entrenamiento, que llevarían a obtener bots más competitivos.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  CONCLUSIONS  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-\section{Conclusions and Future Work}
+\section{Conclusiones y trabajo futuro}
 \label{sec:conclusions}
 
-This paper presents an implementation of a quite simple co-evolutionary approach for the generation of RTS bots: to omit the fitness-based selection mechanism in the evolutionary process. Thus, it simulates the evolution in a more natural way: conducting real battles between individuals to select a survivor for the next generation. This method has been applied on the improvement of the behavioral parameters and rules of the bot's AI in the RTS game Planet Wars. 
-Thus, the classic tournament selection mechanism has been modeled as a battle in the game (called \textit{joust}), in which just the winner will remain (as a parent for the next offspring) in the population. The loser will be deleted.
+Este artículo presenta una implementación de un algoritmo de Programación Genética (PG) co-evolutivo simple para la generación de bots (NPCs) para RTSs. Éste método propone la omisión de la selección basada en fitness en el proceso evolutivo. En su lugar, se simula una evolución de forma más natural, puesto que se basa en la mera supervivencia de los individuos, que se enfrentan en combates contra otros en los que sólo el ganador pasa a la siguiente generación.
 
-According to the results in the experiments, the analysis performed,
-and the reached conclusions, this approach offers three main benefits:
-It yields more general-fighting bots, i.e. non-specialized in fighting
-against specific opponents, since it is a competitive co-evolutionary
-approach which does not need the use of a rival for the evaluation of
-an individual. It actually uses the same individuals in the population
-as opponents; it is less affected by the effect of the noise, since it
-is usually inserted in the loop by the fitness evaluation
-function. The high pressure included here by the loss of just a match
-(the individual will be removed from the population in that case),
-makes it very difficult that non-really-good individuals/bots survive
-and reduces the number of battles to be conducted in the evolution, in
-order to yield competitive bots, so it could reduce the computational
-time of the runs. The generated bots, named SurvivalBots, have been
-tested against some state-of-the-art rivals, getting excellent results
-even in the comparison with highly evolved and specialized bots. 
+Esta propuesta se ha aplicado a la creación y mejora de reglas de comportamiento
+para la IA de un bot que juegue a Planet Wars.
+De forma que la selección se ha modelado como in combate en el juego, que hemos denominado \textit{justa}, en el que el ganador será padre de la siguiente descendencia, mientras que el perdedor será reemplazado por dicha descendencia.
 
-As future work, we will firstly focus in obtaining more competitive
-bots. Thus, more possible actions and decisions will be added to the
-proposed Genetic Programming algorithm; for example, an analysis of the
-distances between planets. In the same line, some tests will be done using an
-unlimited tree depth, which could lead to get much more complex (and
-effective) behavioural engines. 
-% Also, a $4vs4$ joust will be implemented and tested, in which the 2nd and 3rd contenders will not be removed, neither mated. 
-% Finally, we aim to apply this approach to other videogames considered in the area of computational intelligence, such as Unreal\texttrademark~, StarCraft\texttrademark~ or RobotWars\texttrademark~.
+Según se ha demostrado en los experimentos, el algoritmo propuesto ofrece tres beneficios principales: 
+\begin{itemize}
+\item Genera bots más generalistas en su comportamiento, no especializados en un rival en concreto, dado que no utiliza rivales específicos en sus evaluaciones, sino miembros de la propia población.
+\item Se ve menos afectado por el ruido intrínseco a las funciones de evaluación en el entorno de los videojuegos, debido a la gran presión selectiva que introduce el hecho de que un sólo combate perdido por un bot haría que éste se eliminara de la población. De modo que es muy difícil que bots que no sean realmente buenos sobrevivan.
+\item Requiere menos combates en la evaluación (sólo uno), en contraposición a los múltiples combates que se suelen realizar en las evaluaciones de otras propuestas. Esto hace que se reduzca el tiempo de cómputo del algoritmo.
+\end{itemize}
 
-% en las conclusiones hay que generalizar y el tema es el uso de
-% dinï¿½micas de juego en metaheurï¿½sticas y cï¿½mo se podrï¿½a
-% generalizar. Lo que tenemos al final es un orden parcial y ruidoso
-% que se podrï¿½a usar, en general, en todo tipo de algoritmos
-% evolutivos donde haya ese problema - JJ
+Los bots obtenidos, llamados SurvivalBots, han sido enfrentados contra otros bots del estado del arte, obteniendo muy buenos resultados en general, considerando que el menor entrenamiento de los bots obtenidos en esta propuesta.
 
+Como líneas de trabajo futuro se plantean muchas, ya que este enfoque es reciente en nuestras investigaciones. En primer lugar nos centraremos en obtener bots más competitivos y complejos, añadiendo más variedad de condiciones y acciones al algoritmo de PG, como por ejemplo distancias entre planetas.
+En la misma línea se harán pruebas sin limitar el tamaño máximo de los árboles.
 
+\section*{Agradecimientos}
 
-%The results obtained in this study are very promising, but they inherit a flaw from previous works, which is the low flexibility level due to the predefined set of rules/states that the bots follow. This means that almost every bot will eventually behave well, and the diversity in the search loses its relevance.
-%The consideration of a more flexible approach for defining the behavioural engine of the bots, such as a Genetic Programming one [REF GP Genebot], could yield more interesting results and conclusions about the value of the methods proposed in this work.
-
-
-\section*{Acknowledgments}
-
-This work has been supported in part by projects 
-EPHEMECH (TIN2014-56494-C4-3-P, Spanish Ministerio de Economía y Competitividad), 
-PROY-PP2015-06 (Plan Propio 2015 UGR), 
-PETRA (SPIP2014-01437, funded by Dirección General de Tráfico),
-CEI2015-MP-V17 (awarded by CEI BioTIC Granada), and 
-PRY142/14 (funded by Fundación Pública Andaluza Centro de Estudios Andaluces en la IX Convocatoria de Proyectos de Investigación).
-
+Este trabajo ha sido financiado en parte por los proyectos: 
+EPHEMECH (TIN2014-56494-C4-3-P) y KNOWAVES (TEC2015-68752-R), Ministerio de Economía y Competitividad, Fondos FEDER, PROY-PP2015-06 (Plan Propio 2015 UGR), 
+y el proyecto MOSOS (PRY142/14), financiado por la Fundación Pública Andaluza Centro de Estudios Andaluces en la IX Convocatoria de Proyectos de Investigación.
 
 \bibliographystyle{splncs03}
 \bibliography{survival_gpbot}
