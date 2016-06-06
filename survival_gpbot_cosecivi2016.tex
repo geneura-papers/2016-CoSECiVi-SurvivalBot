@@ -1,0 +1,679 @@
+%\documentclass[runningheads,a4paper]{llncs}
+\documentclass{llncs}
+
+\usepackage[latin1]{inputenc}
+%\usepackage[spanish]{babel}
+\usepackage[spanish, es-tabla]{babel} % Denominación de tablas en lugar de 'cuadros'
+\usepackage{graphicx,color,longtable,multirow,times,amsmath,url}
+\usepackage[dvips]{epsfig}
+\usepackage{textcomp}
+\usepackage{verbatim}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{fancyvrb}
+\usepackage{subfigure}
+\usepackage{listings}
+
+
+% \renewcommand{\tablename}{Tabla} 
+
+\newcommand{\keywords}[1]{\par\addvspace\baselineskip
+\noindent\keywordname\enspace\ignorespaces#1}
+
+\providecommand{\tabularnewline}{\\}
+
+\begin{document}
+
+\mainmatter  % start of an individual contribution
+
+% first the title is needed
+\title{Sólo puede quedar uno: \\ Evolución de Bots para RTS 
+basada en supervivencia}
+% Antonio - es la frase de Los Inmortales. :D
+
+
+% a short form should be given in case it is too long for the running head
+\titlerunning{Sólo puede quedar uno}
+
+% the name(s) of the author(s) follow(s) next
+%
+% NB: Chinese authors should write their first names(s) in front of
+% their surnames. This ensures that the names appear correctly in
+% the running heads and the author index.
+%
+
+\author{A. Fern\'andez-Ares \inst{1} \and A.M. Mora \inst{2} \and
+  P. Garc\'ia-S\'anchez  \inst{1} \and P.A. Castillo \and J.J. Merelo \inst{1}}
+%\thanks{NoInstitute}}
+
+% the affiliations are given next; don't give your e-mail address
+% unless you accept that it will be published
+\institute{Depto. de Arquitectura y Tecnología de Computadores\\ 
+%ETSIIT-CITIC, Universidad de Granada, España.\\
+\and
+Depto. de Lenguajes y Sistemas Informáticos\\
+ETSIIT-CITIC, Universidad de Granada, España.\\
+\{antares,amorag,pablogarcia,pacv,jmerelo\}@.ugr.es}
+
+
+
+%
+% NB: a more complex sample for affiliations and the mapping to the
+% corresponding authors can be found in the file "llncs.dem"
+% (search for the string "\mainmatter" where a contribution starts).
+% "llncs.dem" accompanies the document class "llncs.cls".
+%
+
+\maketitle
+
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   ABSTRACT   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+\begin{abstract}
+Este artículo propone un algoritmo evolutivo para optimizar el comportamiento de bots (NPCs) que no requiere de una función de fitness explícita, usando en su lugar combates por pares (a modo de `justa') en los que sólo uno de los contendientes sobrevivirá. Este proceso hará las veces de mecanismo de selección del algoritmo, en el que sólo los ganadores pasarán a la siguiente generación del mismo.
+Se ha utilizado un algoritmo de Programación Genética, diseñado para generar motores de comportamiento para bots del conocido RTS Planet Wars. 
+Este método tiene dos objetivos principales: en primer lugar, paliar el efecto que el la naturaleza 'ruidosa' de la función de fitness añade a la evaluación y, en segundo lugar, generar bots más generales (menos especializados) que los que se obtienen mediante algoritmos evolutivos en los que se usa siempre un contendiente común para evaluar los individuos.
+Más aún, la omisión de un proceso de evaluación explícito reduce el número de combates necesarios para evolucionar, lo que reduce a su vez el tiempo de cómputo del algoritmo.
+Los resultados demuestran que el método converge y que es menos sensible al ruido que otros métodos más tradicionales. Además de esto, con este algoritmo se obtienen bots muy competitivos en comparación con otros bots de la literatura.
+
+%
+%\keywords{Videogames, RTS, evolutionary algorithms, joust selection, survival, co-evolution}
+\end{abstract}
+
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   INTRODUCTION   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+\section{Introducción y descripción del problema}
+\label{sec:intro}
+
+
+Los Algoritmos Evolutivos (AEs) han sido aplicados a juegos durante mucho tiempo, a pesar de que la evaluación de posibles estrategias generadas es \textit{ruidosa} \cite{Genebot_JCST} en el sentido de que existe una incertidumbre inherente sobre el verdadero \textit{fitness} o calidad del \textit{Bot} (NPC) que se esté evaluando.
+Esto es debido a que dicha evaluación depende de varios factores estocásticos: reglas del juego y estado actual,  el comportamiento de los rivales o el estado inicial del juego, dado que todos ellos tendrán influencia en el resultado que pueda obtener el agente. 
+
+
+{\em Planet Wars}, el RTS (\textit{Real-Time Strategy game}) que se propuso como banco de pruebas para la celebración del Google AI Challenge 2010\footnote{\url{http://planetwars.aichallenge.org/}}, obviamente, también presenta este problema. Este juego ha sido utilizado por numerosos autores para el estudio de técnicas de Inteligencia Computacional (IC) en RTSs, tales como la generación automática u optimización de bots o mapas del juego \cite{Genebot_CEC11,ziolko2012automatic,Genebot_CIG2012,LaraMaps14}. 
+
+A modo de resumen, el objetivo del jugador es conquistar los planetas neutrales y los que posee el enemigo en un simulador `espacial'. Cada jugador controlará planetas (recursos) que producen naves (unidades) en función de una tasa de crecimiento. El jugador deberá enviar estas naves a otros planetas, estrellándolas literalmente contra ellos, a fin de conquistarlos (y pasar a dominarlos).
+El ganador será aquel que posea todos los planetas al final de la partida o aquel al que le resten unidades (si un jugador se queda sin naves pierde la partida).
+Existen ciertas restricciones: como un límite de tiempo de un segundo para tomar decisiones, por lo que se podrían considerar {\em turnos}\footnote{Aunque usemos este término, se considera que el juego transcurre en tiempo real.}; o también la imposibilidad de guardar y considerar acciones de turnos anteriores (memoria de acciones realizadas). 
+
+La Figura \ref{figura:PlanetWars1} muestra una captura de pantalla del juego.
+
+\begin{figure}[htb]
+\tiny
+\begin{center}
+  \epsfig{file=./imags/planet_wars_battle.eps,width=5cm}
+\end{center}
+\caption{Captura de la simulación de un estado temprano del juego Planet Wars.
+Los planetas blancos pertenecen al jugador, los planetas grises oscuros
+pertenecen al oponente y los planetas grises claros no pertenecen
+aún a ningún jugador. Los triángulos representas flotas de naves.
+Los números (tanto en planetas como en flotas) representan el número
+de naves que lo componen. El tamaño de los planetas se refiere a la tasa de crecimiento (número de naves que genera por turno) que tiene asociada, de modo que será mayor cuanto más grande sea el planeta.}
+\label{figura:PlanetWars1}
+\end{figure}
+
+Este juego presenta el problema mencionado antes en el cálculo del fitness \cite{Genebot_JCST}. De modo que, como medida habitual, se realizan diversos combates para evaluar a cada individuo (en mapas diferentes y contra diferentes enemigos), de modo que su fitness se obtiene como una media o sumatoria de los resultados obtenidos.
+De esta forma, idealmente, se obtendría una medida más precisa (menos ruidosa) de la calidad de cada individuo. Pero, en realidad, no es aún una solución totalmente fiable dado que depende de diversos valores del propio bot, como el número de victorias obtenidas o de naves generadas en las batallas; así como de otros relacionados con el rendimiento del rival, que podría ser también un bot.
+
+De modo que, incluso si obtuviésemos una evaluación estadísticamente significativa, el calculo del fitnes podría incluir una tendencia relacionada con el oponente seleccionado. Este problema está relacionado con el sobre-entrenamiento de la población para enfrentarse a un rival específico, es decir, los individuos aprenden a jugar excesivamente bien contra él y obtienen peores resultados contra otros enemigos \cite{Genebot_JCST,wilcoxon:ga}.
+
+Este artículo propone un AE co-evolutivo (AEC) \cite{Paredis_CEA} para mejorar la IA de bots de Planet Wars por medio de una evaluación implícita del fitness. Ésta se basará en la \textit{supervivencia de los individuos}.
+Para ello, el proceso de selección se transformará en un \textit{torneo} (o \textit{justa}, para diferenciar el término del clásico torneo de los AEs), en el que sólo los ganadores sobrevivirán y pasarán a ser individuos (padres) de la siguiente generación. De este modo se evita el cálculo del fitness y, por lo tanto, la influencia del ruido que ésta función introduce se reduce.
+Además, con este enfoque se evitan algunos de los parámetros de configuración del algoritmo, como el número de combates o los rangos para las puntuaciones, así como la consideración de un rival en particular para combatir.
+
+Este modelo es más cercano al proceso real de selección natural \cite{darwin1859}, en el que sólo los mejores sobreviven, de lo que lo están los AEs canónicos.
+De forma que el método propuesto se podría denominar un \textit{algoritmo co-evolutivo competitivo} \cite{Rosin_competitive_coevolution,YeoKeun_tournament-based_CoEA}, en el que el fitness (implícito aquí) depende de una competición contra otros individuos.
+
+La propuesta se ha implementado como un algoritmo de Programación Genética (PG) \cite{GP_Koza92}, debido a la flexibilidad que este modelo ofrece respecto a los Algoritmos Genéticos (AGs) \cite{GAs_Goldberg89}, es decir, con PG se pueden crear nuevas reglas de comportamiento, mientras que el AG estaría centrado en la optimización de un conjunto ya existente. Además, esta técnica la hemos aplicado con buenos resultados en trabajos anteriores en esta misma línea \cite{GarciaGP14,EsparciaGP2013}.
+
+Dado que el algoritmo se ejecuta en conjunción con Planet Wars, la justa se ha modelado como un combate en el juego.
+El ganador de la batalla pasa a la siguiente generación como padre de los siguientes bots, el perdedor se elimina de la población.
+Además, la consideración de todos los individuos como oponentes, en lugar de uno sólo, hace que el entrenamiento (la evolución) más generalista, lo que producirá bots capaces de enfrentarse con éxito a un rango más amplio de rivales (aprenderán diversas estrategias).
+
+Se han realizado varios experimentos, a fin de medir la convergencia en la evolución, así como la influencia del ruido en la misma, y se han comparado los resultados con los obtenidos por otros algoritmos y bots de la literatura.
+Nuestro objetivo es comprobar si el método propuesto es válido para evaluar individuos, si resulta menos sensible a la influencia del ruido y si los bots generados son suficientemente competitivos.
+
+
+%The paper is structured as follows. The background section reviews related work regarding the scope (videogames) and the implementation (EAs with no fitness computation or different selection mechanisms). It also describes the problem enclosed in the Planet Wars game.
+%Section \ref{sec:survival_bots} presents the proposed method, termed {Survival Bot}.
+%The experiments analyzing the evolution, noise and obtained bots are described and discussed in Section \ref{sec:experiments}. Finally, the conclusions and future lines of research are presented in Section \ref{sec:conclusions}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  STATE OF THE ART  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+\section{Conceptos preliminares y estado del arte}
+\label{subsec:soa}
+
+La evolución de motores de IA para controlar NPCs/Bots se ha convertido en una técnica muy exitosa en el entorno de los videojuegos. Existen dos enfoques principales: partir de un conjunto de reglas, cuyos parámetros o variables son optimizados \textit{off-line} (antes de la partida real) por medio de AGs \cite{Genebot_CEC11,genebot-evo12,Genebot_CIG2012,CarSetup,book:evolvingtowin}; o bien usar PG para crear automáticamente el conjunto de reglas que compondrán dicho motor de IA partiendo de una serie de condiciones y acciones (antecedentes y consecuentes de las reglas) \cite{GarciaGP14,EsparciaGP2013}.
+
+El problema es ambos casos suele ser la consideración de un bot específico para la evaluación de los potenciales individuos o la definición de una función de fitness que realmente pueda valorar el rendimiento de cada bot en la batalla, atendiendo, normalmente, a diversos factores.
+
+Una posible forma de evitar estos problemas es el uso de AECs, en los que el comportamiento de un individuo depende del de otros individuos de la población.
+En el ámbito de los videojuegos, los AECs se empezaron a aplicar en juegos de tablero como Backgammon \cite{Pollack_Backgammon98}, o Go \cite{Runarsson_Go2005} hace muchos años.
+Además, en años posteriores, este enfoque se ha aplicado a videojuegos, dentro de la rama de IC. Por ejemplo Togelius et al. \cite{Togelius_Cars2007} estudiaron los efectos de la co-evolución en una población de controladores para un juego de carreras de coches; Cook et al. \cite{Cook_Platforming2012} presentaron una propuesta co-evolutiva para el diseño automático de niveles de un juego de plataformas; y recientemente, Cardona et al. \cite{Cardona_MSPacman2013} experimentaron con el rendimiento de un algoritmo competitivo para la evolución simultánea de controladores para Ms. PacMan y el grupo de Fantasmas simultáneamente.
+
+Nuestro trabajo también se ha enfocado como un método co-evolutivo, que es competitivo en la selección de individuos para ser padres de la siguiente generación y, a su vez, cooperativo puesto que todos los individuos forman parte del mismo proceso evolutivo.
+
+Centrándonos en los trabajos dentro del ámbito de los RTSs, Livingstone \cite{Livinstone_RTS2005} comparó diferentes modelos de AI y propuso un entorno co-evolutivo de generación de los mismos, considerando diferentes niveles de AI (nivel de comandante, nivel de unidades, etc), de modo que era un enfoque cooperativo. El que se propone aquí se diferencia también en que el nivel de AI que se evoluciona es el mismo para todos los individuos.
+
+Finalmente, Nogueira et al. \cite{Nogueira_HoF2013} consideraron en una publicación reciente el uso de la llamada \textit{Hall of Fame}, es decir, un conjunto de rivales que componen la élite de los oponentes hasta el momento, para evolucionar bots para el RTS {\em RobotWars}. Los mismos autores aplicaron una versión de dicho enfoque a Planet Wars \cite{NogueiraCoevolutionary14}. 
+En ella, describieron un algoritmo de aprendizaje similar al que proponemos, pero centrado en un subconjunto de individuos (la élite), que creemos que podría tener un efecto negativo en cuanto a la capacidad de generalización de los bots.
+Además, los autores aplican una función de fitness que depende de diversos parámetros, varios combates y medidas de puntuación adicionales.
+
+La propuesta de este trabajo implementa un enfoque co-evolutivo basado en supervivencia, que evita el uso de un función de fitness explícita. El objetivo es intentar minimizar el efecto del ruido que introduciría dicha función \cite{Genebot_JCST}. Además, se evita el uso de parámetros adicionales y el uso de un rival (o rivales) específico en los combates que pudiera llevar a un sobre-entrenamiento contra él (o ellos).
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   SURVIVAL BOT  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+\section{Survival Bots}
+\label{sec:survival_bots}
+
+
+Esta sección describe el algoritmo propuesto para generar bots llamados \textit{SurvivalBots}. En él se combina un algoritmo de PG \cite{GP_Koza92} con diferentes políticas de selección y reemplazo, basadas en la supervivencia de los mejores y con un enfoque co-evolutivo.
+
+% ----------------------------------------------------------------------------
+
+\subsection{Generación de Bots mediante PG}
+\label{subsec:generationgp}
+
+El algoritmo basado en Programación Genética (llamado {\em GPBot}) evoluciona un conjunto de parámetros que modela un árbol de decisión. Durante la evolución cada individuo de la población (un árbol) se evalúa. Para esto, el árbol que modela el motor de comportamiento de un agente, es colocado en un mapa en una partida de Planet Wars. Dependiendo de los resultados obtenidos, el agente (individuo) obtiene un valor fitness que se usa durante el proceso evolutivo.
+
+Durante cada turno de la partida el árbol decidirá la mejor estrategia a seguir, seleccionando por cada planeta un objetivo y un porcentaje de naves a enviar. Estos árboles de decisión son árboles binarios de expresiones compuestas por dos diferentes tipos de nodos:
+
+\begin{itemize}
+\item {\em Decisión}: una expresión lógica formada por una variable, el operador $<$, y un número entre 0 y 1. Es el equivalente al concepto  ``primitiva'' en el campo de la PG.
+\item {\em Acción}: una hoja del árbol (o sea, un ``terminal''). Cada decisión es el nombre del método a llamar del planeta que ejecuta el árbol. Este método indica a qué planeta enviar un porcentaje de las naves disponibles (de 0 a 1).
+\end{itemize}
+
+Las decisiones, definidas por un experto humano, se basan en los valores de las distintas \textit{variables} que son computadas considerando algunas otras variables del juego.
+
+
+\begin{itemize}
+\item {\em myShipsEnemyRatio}: Relación entre las naves del jugador y las naves del enemigo.
+\item {\em myShipsLandedFlyingRatio}: Relación entre las naves del jugador que vuelan y están aterrizadas.
+\item {\em myPlanetsEnemyRatio}: Relación entre el número de planetas del jugador y del enemigo.
+\item {\em myPlanetsTotalRatio}:Relación entre el número de planetas del jugador y del total (incluyendo los del enemigo y los neutrales).
+\item {\em actualMyShipsRatio}: Relación entre el número de naves en el planeta específico que evalúa el árbol y el total de naves del jugador.
+\item {\em actualLandedFlyingRatio}: Relación entre el número de naves aterrizadas y volando desde el planeta específico que evalúa el árbol, y el total de naves del jugador.
+\end{itemize}
+
+Finalmente, las posibles  \textit{acciones} son:
+
+\begin{itemize}
+\item {\em Attack Nearest (Neutral|Enemy|NotMy) Planet}: El objetivo es el planeta más cercano. 
+\item {\em Attack Weakest (Neutral|Enemy|NotMy) Planet}: El objetivo es el planeta con menos naves.
+\item {\em Attack Wealthiest (Neutral|Enemy|NotMy) Planet}: El objetivo es el planeta con más tasa de crecimiento.
+\item {\em Attack Beneficial (Neutral|Enemy|NotMy) Planet}: El objetivo es el planeta más beneficioso, es decir, el que tiene mayor tasa de crecimiento dividido por el número de naves que alberga.
+\item {\em Attack Quickest (Neutral|Enemy|NotMy) Planet}: El objetivo es el planeta más fácil de conquistar: el menor producto entre la distancia del planeta que ejecuta el árbol y el número de naves en el planeta objetivo.
+\item {\em Attack (Neutral|Enemy|NotMy) Base}: El objetivo es el planeta con más naves (es decir, la base).
+\item {\em  Attack Random Planet}. Atacar un planeta aleatorio.
+\item {\em Reinforce Nearest Planet}: Reforzar el planeta más cercano al que ejecuta el árbol.
+\item {\em Reinforce Base}: Reforzar al planeta con más naves del jugador.
+\item {\em Reinforce Wealthiest Planet}: Reforzar al planeta del jugador con mayor tasa de crecimiento.
+\item {\em Do nothing}. No hacer nada.
+
+\end{itemize}
+
+%Un ejemplo de un árbol de decisión posible se muestra a continuación. Este ejemplo tiene un total de 5 nodos, con dos decisiones y tres acciones, con una profundidad de tres niveles.
+%
+%\begin{verbatim}
+%
+%if(myShipsLandedFlyingRatio < 0.796)
+%   if(actualMyShipsRatio < 0.201)
+%      attackWeakestNeutralPlanet(0.481);
+%   else
+%      attackNearestEnemyPlanet(0.913);
+%else
+%   attackNearestEnemyPlanet(0.819);
+%
+%\end{verbatim}\\\\
+
+El comportamiento del bot se explica en el Algoritmo  \ref{alg:turn}.
+
+\begin{algorithm}[ht]
+\begin{algorithmic}
+
+
+\STATE \textit{//Al principio de la ejecución el agente recibe el árbol}
+\STATE árbol $\leftarrow$ leerÁrbol()
+\WHILE{el juego no termine}
+	\STATE // iniciar el turno
+	\STATE calcularPlanetasGlobales() \textit{// p.e. Base o Base Enemiga}
+	\STATE calcularRatiosGlobales() \textit{// p.e. myPlanetsEnemyRatio }
+	\FOR{cada p en planetas del jugador}
+		\STATE calcularPlanetasLocales(p) \textit{// p.e. NearestNeutralPlanet a p}
+		\STATE calcularRatiosDePlanetas(p) \textit{//p.e. actualMyShipsRatio}
+		\STATE ejecutarÁrbol(p, árbol)  \textit{// Enviar un porcentaje de naves al destino}
+   \ENDFOR
+\ENDWHILE
+
+\end{algorithmic}
+\caption{Pseudocódigo del agente propuesto. El mismo árbol se ejecuta durante toda la ejecución del agente.}
+\label{alg:turn}
+\end{algorithm}
+
+% ----------------------------------------------------------------------------
+
+
+\subsection{Selección por supervivencia}
+
+El algoritmo presentado en la sección anterior se ha combinado con una \textit{evaluación implícita del fitness} que se ocupará de la selección y el reemplazo. Dicha evaluación es, en esencia, un combate entre individuos en un determinado mapa. Hemos denominado a este enfrentamiento \textit{justa} (para diferenciarlo del clásico torneo de los AEs).
+De forma que la selección de padres para la siguiente generación se consigue mediante la resolución de estos combates, siendo el ganador (el superviviente) el elegido para continuar en la población y siendo el perdedor eliminado de la misma.
+
+De esta forma, el proceso de selección intenta fomentar la supervivencia de los mejores individuos, paliando en cierta medida el ruido que añaden las funciones de evaluación explícitas (o numéricas) \cite{Genebot_JCST}. De modo que los individuos que no son capaces de ganar un combate son fuertemente penalizados y eliminados de la población.
+Aún así, seguirá habiendo ruido, el cuál es intrínseco al problema en sí. Es decir, un individuo con peores condiciones que otro podría ganar un combate por causas ajenas a su buen rendimiento, como errores del rival o condiciones más favorables en el desarrollo del juego. Aunque Planet Wars parte siempre se escenarios totalmente equivalentes para los contendientes.
+Este hecho permitirá, a su vez, añadir diversidad a la población, lo cual siempre es beneficioso en un algoritmo de optimización combinatoria como este.
+
+En este enfoque hablamos de `iteración' como sinónimo de generación, dado que no se trata de un proceso evolutivo clásico, como se explicará más adelante.
+
+% --------------------------------------------------------------------------
+
+\subsection{Reemplazo de los perdedores}
+\label{subsec:replacement}
+
+Hemos implementado la política de reemplazo del enfoque estacionario clásico de los AEs \cite{Genitor_whitley}. De forma que una gran parte de la población pasa a la siguiente generación y otra parte es sustituida. Este enfoque pretende fomentar la explotación en la búsqueda, a fin de mejorar el factor de convergencia del método. El objetivo es reducir la exploración que es más sensible en un espacio de búsqueda ruidoso como este.
+
+De modo que el algoritmo propuesto realiza dos combates (justas) por generación. Los contendientes se seleccionan de forma aleatoria entre los individuos de la población, asegurando simplemente que no se eligen los mismos bots para los dos combates.
+
+Los dos ganadores pasan a ser los padres de la \textit{operación de cruce}, que genera dos nuevos hijos, que son además mutados e incluidos en la población en el lugar de los individuos que hayan perdido el combate.
+Hemos considerado cruce de sub-árboles y mutación a nivel de nodo, dado que con ellos obtuvimos buenos resultados en trabajos previos \cite{EsparciaGP2013}.
+
+Este enfoque presenta un componente de aleatoriedad mayor que el AE estacionario clásico, debido a la falta de una función de fitness que asigne un valor representativo a cada individuo. La selección aleatoria entre todos los individuos aumenta la probabilidad de que los malos individuos salgan de la población, lo que reduciría también el ruido presente en ésta.
+Este será un factor muy relevante, como se demostrará en los experimentos realizados.
+
+El Algoritmo \ref{alg:completealgorithm} muestra la combinación del algoritmo de PG propuesto con la evaluación implícita del fitness mencionada y los mecanismos de selección y reemplazo.
+
+
+\begin{algorithm}[htb]
+\begin{algorithmic}
+
+\STATE poblacion $\leftarrow$ inicializarPoblacion()
+\WHILE{criterio de terminación no cumplido}
+
+    \STATE descendientes,perdedores,seleccionados $\leftarrow$ \{\}
+    \STATE {\em /* Se eligen dos contendientes aleatorios para la justa */}
+    \STATE contendientes $\leftarrow$ seleccionarContendientes(poblacion)
+    \STATE {\em /* Los contendientes luchan y se obtiene un ganador y un perdedor */} 
+    \STATE ganador1,perdedor1 $\leftarrow$ justa(contendientes)
+    \STATE {\em /* Los bots selecionados no participan en más combates */}
+    \STATE seleccionados $\leftarrow$ seleccionados + ganador1 + perdedor1
+    \STATE {\em /* Contendientes de la segunda justa */}
+    \STATE contendientes $\leftarrow$ selectContenders(poblacion)
+    \STATE {\em /* Los contendientes luchan y se obtiene un ganador y un perdedor */}
+    \STATE ganador2,perdedor2 $\leftarrow$ justa(contendientes)
+    \STATE seleccionados $\leftarrow$ seleccionados + ganador2 + perdedor2
+    \STATE {\em /* Se guarda referencia a los perdedores */}
+    \STATE perdedores $\leftarrow$ perdedores + perdedor1 + perdedor2
+    \STATE {\em /* PROCESO EVOLUTIVO */}
+    \STATE hijo1,hijo2 $\leftarrow$ cruce(ganador1,ganador2);
+    \STATE hijo1,hijo2 $\leftarrow$ mutacion(hijo1,hijo2)
+    \STATE descendientes $\leftarrow$ descendientes + hijo1 + hijo2
+    \STATE {\em /* Reemplazo de perdedores */}
+    \STATE poblacion $\leftarrow$ poblacion - perdedores
+    \STATE poblacion $\leftarrow$ poblacion + descendientes
+
+\ENDWHILE
+
+\end{algorithmic}
+\caption{Pseudocode of the proposed SurvivalBot.}
+\label{alg:completealgorithm}
+\end{algorithm}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   EXPERIMENTS  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+\section{Experimentos y resultados}
+\label{sec:experiments}
+
+Se han realizado varios experimentos para estudiar diferentes aspectos de la propuesta, pero debemos señalar que el principal objetivo no es la generación de los mejores bots (los más competitivos), sino probar la validez de este método co-evolutivo basado en selección por supervivencia o justa. De modo que comprobaremos que el algoritmo converge y que el ruido tiene una influencia menor que en otros casos. Posteriormente analizaremos la calidad de los bots obtenidos.
+
+El conjunto de parámetros considerado en nuestro algoritmo co-evolutivo de PG (Co-PG), SurvivalBot, se muestra en la Tabla \ref{tab:parameters}.
+Éstos son los mismos utilizados previamente por los autores en el trabajo \cite{GarciaGP14}, GPBot, con los que se obtenían buenos bots.
+Además, usamos la misma configuración porque GPBot se usará como base comparativa en los experimentos.
+De modo que, para hacer más justa la comparativa, se han fijado 4000 iteraciones en SurvivalBot (2 combates por iteración), dado que en GPBot se realizaron 8000 combates (32 individuos * 5 combates por evaluación * 50 generaciones).
+Se han considerado 5 mapas representativos (con configuraciones muy diferentes entre sí) que se eligen de forma aleatoria antes de cada combate.
+
+Se han realizado 30 ejecuciones en cada caso, para obtener resultados estadísticamente significativos.
+
+
+\begin{table}
+\begin{center}
+{\footnotesize
+\begin{tabular}{|c|p{4cm}|}
+\hline
+{\em Nombre Parámetro} & {\em Valor} \\\hline \hline
+Tamaño población & 32 \\\hline
+Inicialización & Aleatoria (árboles de 3 niveles)\\ \hline
+Tipo de Cruce & Cruce de sub-árbol \\ \hline
+Tasa de Cruce & 0,5\\ \hline
+Máximo número de turnos por combate & 1000 \\\hline
+Mutación  & Mutación de 1 nodo\\ \hline
+Tasa de Mutación & 0,25 \\ \hline
+Selección & Justa (torneo entre 2) \\ \hline
+Reemplazo & Estacionario\\ \hline
+Criterio de parada & 4000 iteraciones \\ \hline
+Profundidad máxima de los árboles & 7  \\ \hline
+Ejecuciones & 30 \\ \hline
+Mapas usados en la justa & 1 aleatorio elegido entre los mapas \#76 \#69 \#7 \#11 \#26\\ \hline
+\end{tabular}
+\caption{Conjunto de parámetros usado en los experimentos.} 
+\label{tab:parameters}
+}
+\end{center}
+\end{table}
+
+% -----------------------------------------------------------------------------
+
+\subsection{Análisis de las ejecuciones}
+\label{subsec:analysisexecutions}
+
+En este primer conjunto de experimentos analizaremos la convergencia del método propuesto, dado que se espera que su comportamiento, aún sin función explícita de fitness sea similar al de otros AEs. El problema radica en que es difícil mostrar esta convergencia sin contar con un valor numérico para el fitness.
+Por ello, una vez terminada la ejecución, se ha analizado la población de cada generación haciendo uso de una función \textit{Score}, que habíamos definido y usado en artículos anteriores para valorar el rendimiento de un bot en el juego. Ésta se basa en el desarrollo de varios combates, y la consideración del número de victorias obtenidas, turnos requeridos para ganar y turnos resistidos en caso de haber perdido.
+
+De modo que cada individuo $i$ en cada generación/iteración se ha enfrentado con GPBot, obteniendo un Score, definido como:
+ 
+\begin{equation}
+Score_{i}=\alpha+\beta+\gamma
+\label{eq:score}
+\end{equation}
+
+Donde
+
+\begin{equation}
+\alpha  = v, \alpha \in\left[0,N\right]
+\end{equation}
+
+\begin{equation}
+\begin{split}
+\beta =N\times\frac{t_{win}+\frac{1}{N\times t_{MAX}+1}}{\frac{t_{win}}{v+1}+1},\\
+\beta \in\left[0,N\right], \\
+t_{win} \in\left[0,N\times t_{MAX}\right]
+\end{split}
+\end{equation}
+
+\begin{equation}
+\begin{split}
+\gamma  =\frac{t_{defeated}}{N \times t_{MAX}+1}, \\
+\gamma \in\left[0,1\right], \\
+t_{defeated} \in\left[0,N\times t_{MAX}\right]
+\end{split}
+\end{equation}
+
+Considerando el número de combates realizados ($N$), el número de victorias contra GPBot ($v$), el número total de turnos usados para ganar a GPBot ($t_{win}$), el número total de turnos aguantados, si ha sido vencido ($t_{defeated}$) y el número máximo de turnos que dura un combate ($t_{MAX} =1000$). 
+Esta función tiende a favorecer las victorias frente a los turnos.
+Cada individuo se ha enfrentado 3 veces en 10 mapas diferentes: los 5 usados durante la evolución, llamados \textit{training maps} y otros 5 nuevos (\textit{unknown maps}), por tanto $N=30$. 
+
+La Figura \ref{figura:Score_VS_GPBot} muestra los boxplots del Score obtenido por toda la población de las 30 ejecuciones en cada iteración.
+Agrupados según los mapas conocidos (con los que se ha evolucionado) a la izquierda, o los mapas nuevos a la derecha.
+Como se puede ver la tendencia es creciente, como era deseable, además los resultados son ligeramente mejores en los mapas previamente conocidos, como es lógico.
+
+\begin{figure}[htb]
+\tiny
+\begin{center}
+\includegraphics[clip=true,width=6cm]{./imags/score_vs_gpbot_training.eps}
+\includegraphics[clip=true,width=6cm]{./imags/score_vs_gpbot_unknown.eps}
+\end{center}
+\caption{\textit{Score} obtenido en el enfrentamiento contra el mejor GPBot de todos los SurvivaBots obtenidos en cada generación/iteración de las 30 ejecuciones.}
+\label{figura:Score_VS_GPBot}
+\end{figure}
+
+Este estudio se complementa en primer lugar con las dos gráficas que se muestran en la Figura \ref{figura:Victories_VS_GPBot_AllMaps}. En ellas se presenta el porcentaje de individuos (normalizado entre 0 y 1) que gana un determinado número de combates (de 0 a 30) contra GPBot de los que hay en la población inicial (izquierda) y en la final (derecha).
+Como se puede ver, los individuos de las 30 poblaciones iniciales en las ejecuciones tienden a ganar muy pocos o ningún combate, mientras que en las poblaciones finales, el porcentaje de bots capaces de vencer la mayoría de las veces e incluso todos los combates se incrementa en gran medida. Lo que demuestra que las poblaciones, en general, han evolucionado positivamente y han conseguido bots cada vez más competitivos durante el proceso evolutivo.
+
+\begin{figure}[htb]
+\tiny
+\begin{center}
+  \epsfig{file=./imags/victories_vs_gpbot_allmaps_initial,width=6cm}
+  \epsfig{file=./imags/victories_vs_gpbot_allmaps_final,width=6cm}
+\end{center}
+\caption{Histograma del número de victorias contra GPBot para todos los individuos de las poblaciones iniciales y finales de las 30 ejecuciones, en los 30 combates (10 mapas * 3 enfrentamientos)} 
+\label{figura:Victories_VS_GPBot_AllMaps}
+\end{figure}
+
+Por último, si estudiamos la {\em edad} (número de generaciones que sobreviven) de los bots evolucionados, podremos entender mejor la dinámica del proceso. Para ello, la Figura \ref{figura:age} muestra las edades de los individuos en una ejecución. Como se puede ver, la edad media se mantiene en torno a un valor estable durante toda la ejecución, lo que nos indica que la población está continuamente mejorando, de modo que los hijos son capaces de vencer a sus padres en pocas generaciones. Existen valores extremos, debidos, sin duda, al componente aleatorio que hay en la selección de los padres, por el que algunos individuos combatirán muy pocas veces (o ninguna) en una ejecución.
+%
+\begin{figure}[htb]
+\tiny
+\begin{center}
+  \epsfig{file=./imags/ageall,width=5cm}
+\end{center}
+\caption{Boxplots de la edad (número de generaciones/iteraciones que sobrevive un bot) de la población en una ejecución.}
+
+\label{figura:age}
+\end{figure}
+%
+
+A tenor de lo visto en estos experimentos, consideramos que la evolución del algoritmo es la adecuada. Pasaremos a analizar la influencia del ruido en este proceso.
+
+% ---------------------------------------------------------------------------
+
+\subsection{Analysis of the score uncertainty}
+\label{subsec:analysisnoise}
+
+To conduct this study we will compare the 30 best bots obtained by
+GPBot and SurvivalBot across 30 runs; these bots have been
+fixed with a hard to defeat rival, such as the expert/specialized bot
+named ExpGeneBot \cite{Genebot_CIG2012}. 
+% remember: double blind - JJ
+% Antonio - es cierto. Reviso el resto
+The same 10 maps as in previous experiments have been considered, and 30 battles in each one have been done, computing the score in Equation \ref{eq:score}.
+Then a \textit{noise factor} has been calculated for every bot, as the
+% it would be better uncertainty factor - JJ
+% Antonio - vamos a pensarlo para la versión final, porque habría que cambiar las figuras también y Antares está 'de baja'
+% Deberíamos usar Knitr para tener las órdenes que generan las gráficas en el propio paper - JJ
+difference between the maximum and the minimum obtained scores in the
+30 matches. This is because the noise in the scope of optimization in
+videogames is defined as the differences in performance that the same
+individual/bot could show in the same conditions (map and rival), due
+to the pseudo-stochasticity (there are some random events/actions)
+present in the opponent's behaviour and sometimes in the game itself. 
+
+Figure \ref{figura:noise} shows the boxplots of the 30 bots of GPBot
+and SurvivalBot. According to the definition of our noise factor, a
+big distance between values means a higher uncertainty in the
+results; this figure shows that the results for
+SurvivalBot are better than those for GPBot, having a lower
+variance. Thus, we can conclude that the resulting bots for our method
+are more reliable in terms of behaviour and thus, show a more robust
+and predictable behavior. 
+%
+\begin{figure}[htb]
+\tiny
+\begin{center}
+  \epsfig{file=./imags/noise_study,width=4.5cm}
+\end{center}
+\caption{{\em Noise factor}, that is, maximum - minimun scores for every map, of the best 30 bots obtained using GPBot and SurvivalBot approaches, evaluated in 10 different maps (5 previously trained and 5 not previously trained), 30 times/battles per map.}
+\label{figura:noise}
+\end{figure}
+%
+But of course the bots are designed to win battles. We will examine
+their performance in this area next.
+
+
+% --------------------------------------------------------------
+
+\subsection{Analysis of the generated bots}
+\label{subsec:analysisbots}
+
+Firstly, all the SurvivalBots obtained at the end of the runs have been tested against other bots available in the literature. To this end, jut one SurvivalBot per run must be chosen, so first the {\em best} individual of every run has been selected by confronting all the individuals of the last generation in an \textit{all vs. all tournament}. The bot who has won more times is considered as the best. This method has been applied in order to avoid the usage of the score function (and therefore, the shortcomings we are trying to avoid). 
+
+Then, we have confronted the 30 best bots obtained in each configuration again with several bots available in the literature, in the 100 example maps provided by Google with the competition framework. These have been used to validate if the obtained SurvivalBots can be competitive in terms of quality in maps not used during evolution, and against unknown bots (as a difference to the other approaches). Table \ref{tab:literaturebots} presents the bots used as opponents. 
+
+\begin{table}
+\begin{center}
+\begin{tabular}{|c|c|c|c|}
+\hline
+{\em Bot Name} & {\& Reference} & {\em Simulations in training} & {\em Max. Turns} \\\hline \hline
+BullyBot & Google AI Web & None & None \\ \hline
+SurvivalBot & proposed here & 8000 & 1000 \\ \hline
+GeneBot & \cite{Genebot_JCST} & 32000 & 1000 \\ \hline
+ExpGeneBot & \cite{Genebot_CIG2012} & 32000 & 1000 \\ \hline
+GPBot & \cite{GarciaGP14} & 8000 & 1000 \\ \hline
+HoFBot & \cite{NogueiraCoevolutionary14} & 180000 & 500 \\ \hline
+\end{tabular}
+\caption{Bots available in the literature used for measuring the quality of the SurvivalBots.}     % [pedro]
+\label{tab:literaturebots}
+\end{center}
+\end{table}
+
+Figure \ref{figure:boxplot_mejores_contra_clasicos} shows the boxplots of the percentage of victories of the SurvivalBots against every rival. Note that it only shows the victories, not the draws. The most interesting result is that GPBot is clearly outperformed, even if the number of battles has been the same to train SurvivalBot than for GPBot, as we set. Therefore, our method can generate competitive bots without using existing ones in the training. The HoFBot, which was also obtained using co-evolution, has also been defeated more than 50\% times by most of the best SurvivalBots. However, highly trained bots (GeneBot and ExpGenebot), which applied 4 times more evaluations to be generated have been difficult to beat. It is interesting to mention that in \cite{GarciaGP14} GPBot was able to beat these two bots in a higher value, but this happened because they were used to train GPBot, so it was focused only in beating them.
+
+\begin{figure}[htb]
+\tiny
+\begin{center}
+    \includegraphics[width=6cm]{./imags/boxplot_mejores_contra_clasicos.eps}
+
+\end{center}
+\caption{Percentage of victories confronting the 30 best SurvivalBots against existing bots in the literature.}
+\label{figure:boxplot_mejores_contra_clasicos}
+\end{figure}
+
+
+%Although this is not the main contribution of this paper, we also show the resulting behavioural engines of the obtained SurvivalBots, analysing the distribution of actions and decisions at the beginning and at the end of the evolution to understand their behaviour. Figure \ref{figura:tarta_actions} shows the final distribution of the different types of actions ($attack$, $reinforce$ and $do nothing$). This figure shows that the percentage of the $do nothing$ action in the obtained trees has been increased % la acciï¿½n se ha incrementado?
+%                                % Quï¿½ significa eso? Serï¿½ que el
+%                                % nï¿½meor de veces que aparece esa
+%                                % acciï¿½n nosï¿½ dï¿½nde lo ha hecho, ï¿½no?
+%                                % - JJ
+%by the end of the evolution, as it seems logical that not all planets should attack in every turn (they may be waiting to have a large fleet to send). Of course, and because a player wins conquering the enemy planets, it is logical that the $attack$ action is more effective than $reinforce$.
+%
+%\begin{figure}[htb]
+%\tiny
+%\begin{center}
+%
+%
+%    \includegraphics[trim=1cm 7cm 1cm 5.8cm, clip=true,width=4.5cm,angle=-90]{./imags/distribution_initial_action.eps}
+%    \includegraphics[trim=1cm 7cm 1cm 6cm, clip=true,width=4.5cm,angle=-90]{./imags/distribution_final_action.eps}
+%    %\includegraphics{file=./imags/distribution_final_reinforce,width=3cm,angle=-90}
+%
+%
+%\end{center}
+%\caption{Distribution of different types of actions ($attack$, $reinforce$ and $do nothing$) of the generated bots. See section \ref{subsec:generationgp} for more information about actions.}
+%\label{figura:tarta_actions}
+%\end{figure}
+%
+%Figure \ref{figura:tarta_attacking} shows the strategy when a planet is $attacking$ to other. It is clear that the generated bots have a predilection for nearest planets and the ones easiest to be conquered. This make sense because ships flying to long destinations are not being used, so, using a $rush$ strategy makes a good option to conquer and advance.
+%\begin{figure}[htb]
+%\tiny
+%\begin{center}
+%
+%    \includegraphics[trim=1cm 7cm 0cm 7cm, clip=true,width=5cm,angle=-90]{./imags/distribution_initial_attack.eps}
+%    \includegraphics[trim=1cm 7cm 0cm 7cm, clip=true,width=5cm,angle=-90]{./imags/distribution_final_attack.eps}
+%    %\includegraphics{file=./imags/distribution_final_reinforce,width=3cm,angle=-90}
+%
+%\end{center}
+%\caption{Condition of target planet when $attacking$: Nearest, Weakest, Wealthiest, Beneficial, Quickest, Base or Random. See section \ref{subsec:generationgp} for more information about attack actions.}
+%\label{figura:tarta_attacking}
+%\end{figure}
+%
+%Also, the actions are more focused in attacking planets owned by the Enemy (as it can be seen in Figure \ref{figura:tarta_attacking_who}). This can be explained because the bot is not only conquering planets, but also destroying enemy ships that will not be used against it in the future.
+%\begin{figure}[htb]
+%\tiny
+%\begin{center}
+%
+%    \includegraphics[trim=1cm 7cm 1cm 7cm, clip=true,width=5cm,angle=-90]{./imags/distribution_initial_target.eps}
+%    \includegraphics[trim=1cm 7cm 1cm 7cm, clip=true,width=5cm,angle=-90]{./imags/distribution_final_target.eps}
+%    %\includegraphics{file=./imags/distribution_final_reinforce,width=3cm,angle=-90}
+%
+%\end{center}
+%\caption{Owners of target planets when $attacking$: Enemy, Neutral, NotMy. See section \ref{subsec:generationgp} for more information about planet's owner.} % Serï¿½ notmine, ï¿½no? No notmy. FERGU: viene de NotMyPlanet
+%\label{figura:tarta_attacking_who}
+%\end{figure}
+%
+%
+%Figure \ref{figura:tarta_reinforcing} shows the target when a planet is $reinforcing$ the player's planet. As in attack actions, previously explained, it seems to be a good rule focusing in reinforce closer planets, for the same reasons.
+%\begin{figure}[htb]
+%\tiny
+%\begin{center}
+%
+%    \includegraphics[trim=1cm 7cm 1cm 7cm, clip=true,width=5cm,angle=-90]{./imags/distribution_initial_reinforce.eps}
+%    \includegraphics[trim=1cm 7cm 1cm 7cm, clip=true,width=5cm,angle=-90]{./imags/distribution_final_reinforce.eps}
+%    %\includegraphics{file=./imags/distribution_final_reinforce,width=3cm,angle=-90}
+%
+%\end{center}
+%\caption{Destination of planets when $reinforcing$: Near, Base, Wealthiest or Weakest. See section \ref{subsec:generationgp} for more information about reinforcement actions.}
+%\label{figura:tarta_reinforcing}
+%\end{figure}
+%
+%Finally, Figure \ref{figura:tarta_decissions} shows the final proportion of $decisions$. Surprisingly the most important variable to take into account is the ratio between flying and landed ships. This can be explained because it makes sense to find an equilibrium between the two states of ships, as all ships flying or waiting may be counterproductive. The $random$ decision also has importance, as it is the one who gives weights to the branches of the tree.
+%\begin{figure}[htb]
+%\tiny
+%\begin{center}
+%
+%
+%    \includegraphics[trim=1cm 5.5cm 0cm 5.5cm, clip=true,width=4.5cm,angle=-90]{./imags/distribution_initial_condition.eps}
+%    \includegraphics[trim=1cm 5.5cm 0cm 5.5cm, clip=true,width=4.5cm,angle=-90]{./imags/distribution_final_condition.eps}
+%
+%
+%
+%\end{center}
+%\caption{Percentage of $decisions$. See section \ref{subsec:generationgp} for more information about decisions.}
+%\label{figura:tarta_decissions}
+%\end{figure}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  CONCLUSIONS  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+\section{Conclusions and Future Work}
+\label{sec:conclusions}
+
+This paper presents an implementation of a quite simple co-evolutionary approach for the generation of RTS bots: to omit the fitness-based selection mechanism in the evolutionary process. Thus, it simulates the evolution in a more natural way: conducting real battles between individuals to select a survivor for the next generation. This method has been applied on the improvement of the behavioral parameters and rules of the bot's AI in the RTS game Planet Wars. 
+Thus, the classic tournament selection mechanism has been modeled as a battle in the game (called \textit{joust}), in which just the winner will remain (as a parent for the next offspring) in the population. The loser will be deleted.
+
+According to the results in the experiments, the analysis performed,
+and the reached conclusions, this approach offers three main benefits:
+It yields more general-fighting bots, i.e. non-specialized in fighting
+against specific opponents, since it is a competitive co-evolutionary
+approach which does not need the use of a rival for the evaluation of
+an individual. It actually uses the same individuals in the population
+as opponents; it is less affected by the effect of the noise, since it
+is usually inserted in the loop by the fitness evaluation
+function. The high pressure included here by the loss of just a match
+(the individual will be removed from the population in that case),
+makes it very difficult that non-really-good individuals/bots survive
+and reduces the number of battles to be conducted in the evolution, in
+order to yield competitive bots, so it could reduce the computational
+time of the runs. The generated bots, named SurvivalBots, have been
+tested against some state-of-the-art rivals, getting excellent results
+even in the comparison with highly evolved and specialized bots. 
+
+As future work, we will firstly focus in obtaining more competitive
+bots. Thus, more possible actions and decisions will be added to the
+proposed Genetic Programming algorithm; for example, an analysis of the
+distances between planets. In the same line, some tests will be done using an
+unlimited tree depth, which could lead to get much more complex (and
+effective) behavioural engines. 
+% Also, a $4vs4$ joust will be implemented and tested, in which the 2nd and 3rd contenders will not be removed, neither mated. 
+% Finally, we aim to apply this approach to other videogames considered in the area of computational intelligence, such as Unreal\texttrademark~, StarCraft\texttrademark~ or RobotWars\texttrademark~.
+
+% en las conclusiones hay que generalizar y el tema es el uso de
+% dinï¿½micas de juego en metaheurï¿½sticas y cï¿½mo se podrï¿½a
+% generalizar. Lo que tenemos al final es un orden parcial y ruidoso
+% que se podrï¿½a usar, en general, en todo tipo de algoritmos
+% evolutivos donde haya ese problema - JJ
+
+
+
+%The results obtained in this study are very promising, but they inherit a flaw from previous works, which is the low flexibility level due to the predefined set of rules/states that the bots follow. This means that almost every bot will eventually behave well, and the diversity in the search loses its relevance.
+%The consideration of a more flexible approach for defining the behavioural engine of the bots, such as a Genetic Programming one [REF GP Genebot], could yield more interesting results and conclusions about the value of the methods proposed in this work.
+
+
+\section*{Acknowledgments}
+
+This work has been supported in part by projects 
+EPHEMECH (TIN2014-56494-C4-3-P, Spanish Ministerio de Economía y Competitividad), 
+PROY-PP2015-06 (Plan Propio 2015 UGR), 
+PETRA (SPIP2014-01437, funded by Dirección General de Tráfico),
+CEI2015-MP-V17 (awarded by CEI BioTIC Granada), and 
+PRY142/14 (funded by Fundación Pública Andaluza Centro de Estudios Andaluces en la IX Convocatoria de Proyectos de Investigación).
+
+
+\bibliographystyle{splncs03}
+\bibliography{survival_gpbot}
+
+
+
+\end{document}
