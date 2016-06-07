@@ -256,7 +256,7 @@ El comportamiento del bot se explica en el Algoritmo  \ref{alg:turn}.
 
 % ----------------------------------------------------------------------------
 
-
+\vspace{-0.7cm}
 \subsection{Selección por supervivencia}
 
 El algoritmo presentado en la sección anterior se ha combinado con una \textit{evaluación implícita del fitness} que se ocupará de la selección y el reemplazo. Dicha evaluación es, en esencia, un combate entre individuos en un determinado mapa. Hemos denominado a este enfrentamiento \textit{justa} (para diferenciarlo del clásico torneo de los AEs).
@@ -403,7 +403,7 @@ t_{defeated} \in\left[0,N\times t_{MAX}\right]
 
 Considerando el número de combates realizados ($N$), el número de victorias contra GPBot ($v$), el número total de turnos usados para ganar a GPBot ($t_{win}$), el número total de turnos aguantados, si ha sido vencido ($t_{defeated}$) y el número máximo de turnos que dura un combate ($t_{MAX} =1000$). 
 Esta función tiende a favorecer las victorias frente a los turnos.
-Cada individuo se ha enfrentado 3 veces en 10 mapas diferentes: los 5 usados durante la evolución, llamados \textit{training maps} y otros 5 nuevos (\textit{unknown maps}), por tanto $N=30$. 
+Cada individuo se ha enfrentado 3 veces en 10 mapas diferentes: los 5 usados durante la evolución, llamados \textit{mapas entrenados} y otros 5 nuevos (\textit{mapas no entrenados}), por tanto $N=30$. 
 
 La Figura \ref{figura:Score_VS_GPBot} muestra los \textit{boxplots} del \textit{Score} obtenido por toda la población de las 30 ejecuciones en cada iteración.
 Agrupados según los mapas conocidos (con los que se ha evolucionado) a la izquierda, o los mapas nuevos a la derecha.
@@ -412,8 +412,8 @@ Como se puede ver la tendencia es creciente, como era deseable, además los resul
 \begin{figure}[htb]
 \tiny
 \begin{center}
-\includegraphics[clip=true,width=6cm]{./imags/score_vs_gpbot_training.eps}
-\includegraphics[clip=true,width=6cm]{./imags/score_vs_gpbot_unknown.eps}
+\includegraphics[clip=true,width=6cm]{./imags/score_vs_gpbot_training_spa.eps}
+\includegraphics[clip=true,width=6cm]{./imags/score_vs_gpbot_unknown_spa.eps}
 \end{center}
 \caption{\textit{Score} obtenido en el enfrentamiento contra el mejor GPBot de todos los SurvivaBots obtenidos en cada generación/iteración de las 30 ejecuciones.}
 \label{figura:Score_VS_GPBot}
@@ -425,8 +425,8 @@ Como se puede ver, los individuos de las 30 poblaciones iniciales en las ejecuci
 \begin{figure}[htb]
 \tiny
 \begin{center}
-  \epsfig{file=./imags/victories_vs_gpbot_allmaps_initial,width=6cm}
-  \epsfig{file=./imags/victories_vs_gpbot_allmaps_final,width=6cm}
+  \epsfig{file=./imags/victories_vs_gpbot_allmaps_initial_spa,width=6cm}
+  \epsfig{file=./imags/victories_vs_gpbot_allmaps_final_spa,width=6cm}
 \end{center}
 \caption{Histograma del número de victorias contra GPBot para todos los individuos de las poblaciones iniciales y finales de las 30 ejecuciones, en los 30 combates (10 mapas * 3 enfrentamientos)} 
 \label{figura:Victories_VS_GPBot_AllMaps}
@@ -437,7 +437,7 @@ Por último, si estudiamos la {\em edad} (número de generaciones que sobreviven) 
 \begin{figure}[htb]
 \tiny
 \begin{center}
-  \epsfig{file=./imags/ageall,width=5cm}
+  \epsfig{file=./imags/ageall_spa,width=5cm}
 \end{center}
 \caption{\textit{Boxplots} de la edad (número de generaciones/iteraciones que sobrevive un bot) de la población en una ejecución.}
 
@@ -458,7 +458,7 @@ Para elegir el mejor SurvivalBot de cada ejecución, se ha realizado un torneo \t
 Éstos se han enfrentado contra el mejor rival de nuestros trabajos, el bot experto o especializado ExpGeneBot \cite{Genebot_CIG2012}, capaz de adaptar sus estrategias a las características del mapa en el que se desarrolla el combate. 
 Dichos enfrentamientos se han realizado en los mismos 10 mapas considerados en el experimento anterior, en cada uno de los cuales se han realizado 30 combates y calculado el Score de los bots implicados, siguiendo la Ecuación \ref{eq:score}.
 
-A fin de comprobar la influencia que ha tenido el ruido en la generación de los SurvivalBots, hemos calculado un factor de ruido (\textit{noise measure}) para cada bot, el cual se ha obtenido como la diferencia entre el máximo y el mínimo de los Scores obtenidos en los 30 combates que ha llevado a cabo cada bot en cada mapa. 
+A fin de comprobar la influencia que ha tenido el ruido en la generación de los SurvivalBots, hemos calculado un \textit{factor de ruido} para cada bot, el cual se ha obtenido como la diferencia entre el máximo y el mínimo de los Scores obtenidos en los 30 combates que ha llevado a cabo cada bot en cada mapa. 
 
 La Figura \ref{figura:noise} muestra los \textit{boxplots} de los 30 GPBots y SurvivalBots. Según la definición del factor de ruido que hemos definido, una distancia grande entre valores significará una mayor incertidumbre en los resultados.
 Las gráficas muestran que los SurvivalBots se comportan mejor en este sentido, presentando una varianza menor. De modo que se puede concluir que los bots obtenidos mediante el método descrito en este artículo son más fiables o robustos en términos de comportamiento y rendimiento.
@@ -466,13 +466,14 @@ Las gráficas muestran que los SurvivalBots se comportan mejor en este sentido, p
 \begin{figure}[htb]
 \tiny
 \begin{center}
-  \epsfig{file=./imags/noise_study,width=4.5cm}
+  \epsfig{file=./imags/noise_study_spa,width=4.5cm}
 \end{center}
-\caption{{\em Noise measure} o factor de ruido, calculado como el máximo score obtenido - el mínimo en cada mapa, para cada uno de los 30 GPBots y SurvivalBots. 30 combates por mapa y 10 mapas diferentes.}
+\caption{{\em Factor de ruido}, calculado como el máximo score obtenido - el mínimo en cada mapa, para cada uno de los 30 GPBots y SurvivalBots. 30 combates por mapa y 10 mapas diferentes.}
 \label{figura:noise}
 \end{figure}
 %
 
+%\vspace{-0.7cm}
 Finalmente, en la siguiente sección analizaremos la calidad o competitividad de los bots obtenidos con el método propuesto, ya que ese es el objetivo final de esta evolución.
 
 % --------------------------------------------------------------
@@ -489,7 +490,7 @@ Los enfrentamientos se han realizado en los 100 mapas de ejemplo que proporcionó
 \begin{center}
 \begin{tabular}{|c|c|c|c|}
 \hline
-{\em Bot} & {\& Referencia} & {\em Combates en el entrenamiento} & {\em Max. Turnos} \\\hline \hline
+{\em Bot} & {Referencia} & {\em Combates en el entrenamiento} & {\em Max. Turnos} \\\hline \hline
 BullyBot & Web del Google AI Challenge & No & No \\ \hline
 SurvivalBot & propuesto aquí & 8000 & 1000 \\ \hline
 GeneBot & \cite{Genebot_JCST} & 32000 & 1000 \\ \hline
@@ -502,7 +503,7 @@ HoFBot & \cite{NogueiraCoevolutionary14} & 180000 & 500 \\ \hline
 \end{center}
 \end{table}
 
-\vspace{-1.2cm}
+%\vspace{-1.2cm}
 La Figura \ref{figure:boxplot_mejores_contra_clasicos} muestra los \textit{boxplots} del porcentaje de victorias obtenido por los SurvivalBots contra los demás rivales (no se consideran los empates).
 
 El resultado más interesante es que GPBot es ampliamente superado, dado que el número de combates en la evolución es el mismo y la base de sus motores de IA, basada en PG es similar.
@@ -512,14 +513,14 @@ Sin embargo, bots ampliamente entrenados (4 veces más evaluaciones) y basados en
 \begin{figure}[htb]
 \tiny
 \begin{center}
-    \includegraphics[width=6cm]{./imags/boxplot_mejores_contra_clasicos.eps}
+    \includegraphics[width=6cm]{./imags/boxplot_mejores_contra_clasicos_spa.eps}
 
 \end{center}
-\caption{Percentage of victories confronting the 30 best SurvivalBots against existing bots in the literature.}
+\caption{Porcentaje de victorias al enfrentar los mejores 30 SurvivalBots contra otros bots de la literatura.}
 \label{figure:boxplot_mejores_contra_clasicos}
 \end{figure}
 
-\vspace{-0.5cm}
+%\vspace{-0.5cm}
 En cualquier caso, este es un punto de partida para SurvivalBot, que tiene mucho margen de mejora, empezando por un mayor número de iteraciones/combates en su entrenamiento, que llevarían a obtener bots más competitivos.
 
 
